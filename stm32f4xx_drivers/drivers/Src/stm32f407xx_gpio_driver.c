@@ -6,6 +6,7 @@
  */
 #include "stm32f407xx.h"
 #include "stm32f407xx_gpio_driver.h"
+#include <stdint.h>
 
 /*
  *@brief: API to Enable/Disable GPIO Peripheral Clock Control.
@@ -112,7 +113,49 @@ void GPIO_PeriClockControl(GPIO_RegDef_t *pGPIOx, uint8_t EnOrDi)
  * */
 void GPIO_Init(GPIO_Handle_t *pGPIOHandle)
 {
+		uint32_t temp = 0;
 
+		if (pGPIOHandle->GPIO_PinConfig.GPIO_PinMode <= GPIO_MODE_ANALOG) {
+
+			/* Non-interrupt mode(ref. GPIO Pin Mode #defines in the header)*/
+			/* Configure the mode of the GPIO Pin */
+			temp = (pGPIOHandle->GPIO_PinConfig.GPIO_PinMode << (2 * pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber));
+			pGPIOHandle->pGPIOx->MODER &= ~(0x3 << pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber); /* Clearing */
+			pGPIOHandle->pGPIOx->MODER |= temp; /* Setting */
+			temp = 0;
+
+			/* Configure the speed of the GPIO Pin */
+			temp = (pGPIOHandle->GPIO_PinConfig.GPIO_PinSpeed << (2 * pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber));
+			pGPIOHandle->pGPIOx->OSPEEDR &= ~(0x3 << pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber); /* Clearing */
+			pGPIOHandle->pGPIOx->OSPEEDR |= temp;
+			temp = 0;
+
+			/* Configure the PuPd settings */
+			temp = (pGPIOHandle->GPIO_PinConfig.GPIO_PinPuPdControl << (2 * pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber));
+			pGPIOHandle->pGPIOx->PUPDR &= ~(0x1 << pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber); /* Clearing */
+			pGPIOHandle->pGPIOx->PUPDR |= temp;
+			temp = 0;
+
+			/* Configure the OPtype */
+			temp = (pGPIOHandle->GPIO_PinConfig.GPIO_PinOPType << (pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber));
+			pGPIOHandle->pGPIOx->OSPEEDR |= temp;
+			temp = 0;
+
+			/* Configure Alternate Function Mode */
+			if (pGPIOHandle->GPIO_PinConfig.GPIO_PinMode == GPIO_MODE_ALTFN) {
+				uint8_t temp1 = 0, temp2 = 0;
+
+				temp1 = pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber / 8;
+				temp2 = pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber % 8;
+				pGPIOHandle->pGPIOx->AFR[temp1] &= ~(0xF << (4 * temp2));
+				pGPIOHandle->pGPIOx->AFR[temp1] |= (pGPIOHandle->GPIO_PinConfig.GPIO_PinAltFunMode << (4 * temp2));
+			}
+
+		} else {
+
+			/*Interrupt Mode */
+
+		}
 }
 
 /*
@@ -123,6 +166,46 @@ void GPIO_Init(GPIO_Handle_t *pGPIOHandle)
 void GPIO_DeInit(GPIO_RegDef_t *pGPIOx)
 {
 
+			if(pGPIOx == GPIOA) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOB) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOC) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOD) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOD) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOE) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOF) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOG) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOH) {
+
+				GPIOA_PCLK_RESET();
+
+			} else if (pGPIOx == GPIOI) {
+
+				GPIOA_PCLK_RESET();
+			}
 }
 
 /*
@@ -133,7 +216,11 @@ void GPIO_DeInit(GPIO_RegDef_t *pGPIOx)
  * */
 uint8_t GPIO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
 {
+	uint8_t value;
 
+	value = (uint8_t)((pGPIOx->IDR >> PinNumber) & 0x00000001);
+
+	return value;
 }
 
 /*
@@ -143,6 +230,11 @@ uint8_t GPIO_ReadFromInputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
  * */
 uint16_t GPIO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx)
 {
+	uint16_t value;
+
+	value = (uint16_t)pGPIOx->IDR;
+
+	return value;
 
 }
 
@@ -156,7 +248,15 @@ uint16_t GPIO_ReadFromInputPort(GPIO_RegDef_t *pGPIOx)
  * */
 void GPIO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t value)
 {
+	if (value == GPIO_PIN_SET) {
 
+		pGPIOx->ODR |= (1 << PinNumber);
+
+	} else {
+
+		pGPIOx->ODR &= ~(1 << PinNumber);
+
+	}
 }
 
 /*
@@ -167,7 +267,7 @@ void GPIO_WriteToOutputPin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber, uint8_t val
  * */
 void GPIO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint8_t value)
 {
-
+	pGPIOx->ODR = value;
 }
 
 /*
@@ -178,7 +278,7 @@ void GPIO_WriteToOutputPort(GPIO_RegDef_t *pGPIOx, uint8_t value)
  * */
 void GPIO_TogglePin(GPIO_RegDef_t *pGPIOx, uint8_t PinNumber)
 {
-
+	pGPIOx->ODR ^= (1 << PinNumber);
 }
 
 /*
